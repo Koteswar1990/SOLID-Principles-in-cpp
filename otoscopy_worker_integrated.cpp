@@ -9,7 +9,7 @@ namespace imaging
         std::unique_ptr<utility::processing::VideoPipeline> _pipeline;
         std::function<void(std::exception_ptr)> _handler;
         
-        // NEW: Transform member for crop positioning
+        // NEW: Transform member for crop positioning (optional)
         std::unique_ptr<utility::processing::OtoscopeTransform> _transform;
         
         // NEW: Frame dimension tracking
@@ -18,11 +18,10 @@ namespace imaging
         int _frameHeight = 0;
 
     public:
-        // Updated constructor to accept transform
+        // UNCHANGED: Keep original constructor exactly the same
         OtoscopyWorker(std::shared_ptr<utility::processing::VideoSource> source,
-                       utility::processing::OtoscopyStrategyType strategy,
-                       std::unique_ptr<utility::processing::OtoscopeTransform> transform = nullptr)
-            : _source(source), _strategy(strategy), _transform(std::move(transform))
+                       utility::processing::OtoscopyStrategyType strategy)
+            : _source(source), _strategy(strategy)
         {
             _sink = utility::processing::OtoscopySinkType{};
             _handler = [this](std::exception_ptr ptr) {
@@ -40,7 +39,7 @@ namespace imaging
             };
         }
 
-        // Move constructor
+        // UPDATED: Move constructor to handle new members
         OtoscopyWorker(OtoscopyWorker&& other) noexcept
             : _sink{other._sink}, 
               _pipeline{std::move(other._pipeline)}, 
@@ -53,7 +52,7 @@ namespace imaging
         {
         }
 
-        // Move assignment operator
+        // UPDATED: Move assignment operator to handle new members
         OtoscopyWorker& operator=(OtoscopyWorker&& other) noexcept
         {
             if (this != &other)
@@ -70,7 +69,7 @@ namespace imaging
             return *this;
         }
 
-        // Existing methods
+        // UNCHANGED: All existing methods remain exactly the same
         void SetStrategy(utility::processing::OtoscopyStrategyType strategy) noexcept
         {
             _strategy = strategy;
@@ -117,7 +116,7 @@ namespace imaging
             }
         }
 
-        // NEW: Transform access methods
+        // NEW: Transform access methods (use these instead of constructor parameter)
         utility::processing::OtoscopeTransform* GetTransform() 
         {
             return _transform.get();
@@ -126,6 +125,18 @@ namespace imaging
         void SetTransform(std::unique_ptr<utility::processing::OtoscopeTransform> transform)
         {
             _transform = std::move(transform);
+        }
+
+        // NEW: Create and set transform with parameters
+        void CreateTransform(std::pair<int, int> offset, uint32_t cropRadius, uint32_t maskRadius)
+        {
+            _transform = std::make_unique<utility::processing::OtoscopeTransform>(offset, cropRadius, maskRadius);
+        }
+
+        // NEW: Check if transform is available
+        bool HasTransform() const
+        {
+            return _transform != nullptr;
         }
 
         // NEW: Frame dimension tracking methods

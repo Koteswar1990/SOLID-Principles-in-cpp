@@ -2,7 +2,7 @@
 
 ## Summary of Changes
 
-The enhanced OtoscopyWorker class adds **click-to-reposition functionality** while maintaining full backward compatibility with your existing code.
+The enhanced OtoscopyWorker class adds **click-to-reposition functionality** while maintaining **complete backward compatibility**. **No constructor changes required!**
 
 ## Side-by-Side Comparison
 
@@ -27,7 +27,7 @@ private:
     std::unique_ptr<utility::processing::VideoPipeline> _pipeline;
     std::function<void(std::exception_ptr)> _handler;
     
-    // ✅ NEW: Transform for crop positioning
+    // ✅ NEW: Transform for crop positioning (optional)
     std::unique_ptr<utility::processing::OtoscopeTransform> _transform;
     
     // ✅ NEW: Thread-safe frame dimension tracking
@@ -47,10 +47,10 @@ OtoscopyWorker(std::shared_ptr<utility::processing::VideoSource> source,
 
 **AFTER:**
 ```cpp
+// ✅ UNCHANGED: Constructor signature remains exactly the same!
 OtoscopyWorker(std::shared_ptr<utility::processing::VideoSource> source,
-               utility::processing::OtoscopyStrategyType strategy,
-               std::unique_ptr<utility::processing::OtoscopeTransform> transform = nullptr)
-    : _source(source), _strategy(strategy), _transform(std::move(transform))
+               utility::processing::OtoscopyStrategyType strategy)
+    : _source(source), _strategy(strategy)
 ```
 
 ### Move Constructor
@@ -130,9 +130,11 @@ bool Disable() noexcept;
 ```cpp
 // All existing methods remain unchanged, PLUS these new methods:
 
-// ✅ Transform access methods
+// ✅ Transform management methods
 utility::processing::OtoscopeTransform* GetTransform();
 void SetTransform(std::unique_ptr<utility::processing::OtoscopeTransform> transform);
+void CreateTransform(std::pair<int, int> offset, uint32_t cropRadius, uint32_t maskRadius);
+bool HasTransform() const;
 
 // ✅ Frame dimension tracking methods
 void SetFrameDimensions(int width, int height);
@@ -147,18 +149,20 @@ void SetSinkWithFrameTracking(std::function<void(utility::processing::types::Vid
 
 ## What Changes Are Required in Your Code
 
-### 1. **Constructor Usage** (Optional - Backward Compatible)
+### 1. **Constructor Usage** (✅ NO CHANGES NEEDED!)
 ```cpp
-// Your current code still works:
+// Your existing code continues to work exactly as before:
 auto worker = std::make_unique<OtoscopyWorker>(source, strategy);
-
-// To enable click-to-reposition, pass a transform:
-auto transform = std::make_unique<utility::processing::OtoscopeTransform>(
-    std::make_pair(0, 0), cropRadius, maskRadius);
-auto worker = std::make_unique<OtoscopyWorker>(source, strategy, std::move(transform));
+// ✅ No changes needed anywhere in your project!
 ```
 
-### 2. **Display Widget Update** (Required for Click Functionality)
+### 2. **Enable Click-to-Reposition** (Only where you want this feature)
+```cpp
+// In places where you want click-to-reposition, add:
+worker->CreateTransform(std::make_pair(0, 0), cropRadius, maskRadius);
+```
+
+### 3. **Display Widget Update** (Only for click functionality)
 ```cpp
 // Replace QLabel with OtoScopyLabel
 const auto frame = new OtoScopyLabel();
@@ -167,6 +171,9 @@ const auto frame = new OtoScopyLabel();
 _otoscopyWorker->SetSinkWithFrameTracking([frame, overlay](auto f) {
     // Your existing sink code here
 });
+
+// Create transform for click-to-reposition
+_otoscopyWorker->CreateTransform(std::make_pair(0, 0), cropRadius, maskRadius);
 
 // Add click handling
 connect(frame, &OtoScopyLabel::clickedAt, this, [this](const QPoint& imagePos) {
@@ -180,19 +187,60 @@ connect(frame, &OtoScopyLabel::clickedAt, this, [this](const QPoint& imagePos) {
 
 ## Benefits of the Enhanced Class
 
-✅ **Backward Compatibility**: Your existing code continues to work unchanged  
-✅ **Click-to-Reposition**: Click anywhere to move the crop center  
+✅ **Zero Breaking Changes**: Your existing code continues to work unchanged  
+✅ **No Constructor Updates**: All existing constructor calls work as-is  
+✅ **Optional Enhancement**: Click-to-reposition is only enabled where you add it  
 ✅ **Thread Safety**: Frame dimensions are tracked safely across threads  
 ✅ **Boundary Protection**: Crop never goes outside frame boundaries  
 ✅ **Performance**: Minimal overhead, efficient updates  
-✅ **Flexibility**: Transform can be set/changed at runtime  
+✅ **Flexibility**: Transform can be created, set, or changed at runtime  
+
+## Migration Strategy
+
+### Phase 1: **Drop-in Replacement** (Zero Risk)
+1. **Replace** your existing OtoscopyWorker class with the enhanced version
+2. **Compile** your project - everything should work exactly as before
+3. **Test** existing functionality to ensure no regressions
+
+### Phase 2: **Add Click-to-Reposition** (Where Needed)
+1. **Identify** display widgets where you want click-to-reposition
+2. **Replace** QLabel with OtoScopyLabel in those widgets
+3. **Add** transform creation and click handling
+4. **Test** the new functionality
+
+### Phase 3: **Optional Enhancements**
+1. **Use** enhanced sink with automatic frame tracking
+2. **Add** visual feedback (crosshair, preview circle)
+3. **Implement** additional transform features as needed
 
 ## Testing Your Integration
 
 1. **Compile** your project with the enhanced class
-2. **Verify** existing functionality still works
-3. **Test** click-to-reposition by clicking on the otoscopy image
+2. **Verify** all existing OtoscopyWorker functionality still works
+3. **Test** click-to-reposition in widgets where you've added it
 4. **Validate** boundary constraints work near edges
 5. **Confirm** co-registration with B-Mode images remains accurate
 
-The enhanced OtoscopyWorker maintains the same interface and behavior as your existing class, with powerful new capabilities for dynamic crop positioning!
+## Rollback Plan
+
+If you need to rollback for any reason:
+1. Remove the new private members
+2. Remove the new methods
+3. Your existing code will continue to work exactly as before
+4. **No constructor calls need to be changed**
+
+## Summary
+
+**🎉 Perfect Backward Compatibility**
+- Constructor signature unchanged
+- All existing methods work exactly the same
+- No breaking changes anywhere in your codebase
+- Enhanced features are completely optional
+
+**🚀 New Capabilities**
+- Click-to-reposition crop functionality
+- Thread-safe frame dimension tracking
+- Runtime transform creation and management
+- Enhanced sink with automatic frame tracking
+
+The enhanced OtoscopyWorker is a **drop-in replacement** that adds powerful new capabilities while maintaining complete compatibility with your existing project!
